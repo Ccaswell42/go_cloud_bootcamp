@@ -6,8 +6,26 @@ import (
 	"github.com/ivahaev/timer"
 )
 
-func (p *Player) NextSong() {
+func (p *Player) Play() error {
+	p.mu.Lock()
+	if p.FirstTrack.Len() == 0 {
+		p.mu.Unlock()
+		return errors.New("playlist is empty")
+	}
+	if p.NowPlaying == nil {
+		p.NowPlaying = p.FirstTrack.Front()
+	}
+	/// if p.FirstTrack.Len() == 1 {
+	// 		go p.PlaySong()
+	//   }
+	//
+	//
+	//
+	//
+	p.PlayChan <- struct{}{}
+	p.mu.Unlock()
 
+	return nil
 }
 
 func (p *Player) PrevSong() {
@@ -35,14 +53,17 @@ func (p *Player) DeleteSong(songTarget Song) error {
 			break
 		}
 	}
+	p.mu.Lock()
 	cast, ok := res.Value.(Song)
+	p.mu.Unlock()
 	if !ok || cast.Name != songTarget.Name {
 		return errors.New("no such song")
 	}
+	p.mu.Lock()
 	if res.Value.(Song).IsPlaying {
+		p.mu.Unlock()
 		return errors.New("can't delete, the song is playing now")
 	}
-	p.mu.Lock()
 	p.FirstTrack.Remove(res)
 	p.mu.Unlock()
 
@@ -50,7 +71,7 @@ func (p *Player) DeleteSong(songTarget Song) error {
 	return nil
 }
 
-func (p *Player) PlaySong() {
+func (p *Player) PlaySong(chPlay, chPause, chNext, chPrev chan struct{}) {
 	p.mu.Lock()
 	song := p.NowPlaying.Value.(Song)
 	p.mu.Unlock()
@@ -58,13 +79,13 @@ func (p *Player) PlaySong() {
 	timerDuration.Start()
 	for {
 		select {
-		case <-p.Pause:
+		case <-chPause:
 			timerDuration.Pause()
 			song.IsPlaying = false
 			p.mu.Lock()
 			p.NowPlaying.Value = song
 			p.mu.Unlock()
-		case <-p.Play:
+		case <-chPlay:
 			timerDuration.Start()
 			song.IsPlaying = true
 			p.mu.Lock()
@@ -72,21 +93,40 @@ func (p *Player) PlaySong() {
 			p.mu.Unlock()
 		case <-timerDuration.C:
 			return
+		case <-chNext:
+			return
+		case <-chPrev:
+			return
 		}
 	}
 }
 
-func (p *Player) Playing() {
-	e := p.FirstTrack.Front()
-	for e := p.FirstTrack.Front(); e != nil; e = e.Next() {
-		// do something with e.Value
-	}
+func (p *Player) Controller() {
 
+	chPlay := make(chan struct{})
+	chPause := make(chan struct{})
+	chNext := make(chan struct{})
+	chPrev := make(chan struct{})
 	for {
-		if e == nil {
-
+		select {
+		case <-p.PlayChan:
+			go p.PlaySong(chPlay, chPause, chNext, chPrev)
+			chPlay <- struct{}{}
 		}
 
 	}
 
+}
+
+func (p *Player) CurrentSong() Song {
+	p.mu.Lock()
+	song := p.NowPlaying.Value.(Song)
+	p.mu.Unlock()
+	return song
+}
+
+func (p *Player) UpdateNextSong(songTarget Song) {
+	p.mu.Lock()
+	p.FirstTrack.InsertAfter(songTarget, p.NowPlaying)
+	p.mu.Unlock()
 }

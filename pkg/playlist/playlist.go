@@ -12,16 +12,15 @@ type Player struct {
 	FirstTrack *list.List
 	NowPlaying *list.Element
 	mu         *sync.Mutex
-	Play       chan struct{}
-	Pause      chan struct{}
-	Next       chan struct{}
-	Prev       chan struct{}
+	PlayChan   chan struct{}
+	PauseChan  chan struct{}
+	NextChan   chan struct{}
+	PrevChan   chan struct{}
 }
 
 type Song struct {
 	Name      string
 	Duration  time.Duration
-	Stop      time.Duration
 	IsPlaying bool
 }
 
@@ -29,5 +28,7 @@ func init() {
 
 	//songa := Song{Name: "za dengi da", Duration: time.Second * 60}
 
-	Playlist = Player{FirstTrack: list.New(), Stop: false}
+	Playlist = Player{FirstTrack: list.New()}
+	go Playlist.Controller()
+
 }
