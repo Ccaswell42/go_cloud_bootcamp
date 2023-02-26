@@ -26,9 +26,14 @@ type Song struct {
 
 func init() {
 
-	//songa := Song{Name: "za dengi da", Duration: time.Second * 60}
-
-	Playlist = Player{FirstTrack: list.New()}
-	go Playlist.Controller()
+	Playlist = Player{FirstTrack: list.New(),
+		NowPlaying: nil,
+		mu:         &sync.Mutex{},
+		PlayChan:   make(chan struct{}),
+		PauseChan:  make(chan struct{}),
+		NextChan:   make(chan struct{}),
+		PrevChan:   make(chan struct{}),
+	}
+	//go Playlist.Controller()
 
 }
