@@ -1,5 +1,5 @@
 CREATE TABLE playlist (
-                                 name varchar(70) NOT NULL,
-                                 duration int NOT NULL,
-                                 now_playing boolean NOT NULL
+                                 number serial NOT NULL ,
+                                 name varchar(70) NOT NULL UNIQUE ,
+                                 duration int NOT NULL
 );
