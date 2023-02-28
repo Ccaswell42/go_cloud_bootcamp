@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "/pkg/api";
+
+package proto;
+
+
+message PlayMessage {
+  string SongName = 1;
+}
+
+message Empty{
+}
+
+service Playlist {
+  rpc Play (Empty) returns (PlayMessage){}
+}
+

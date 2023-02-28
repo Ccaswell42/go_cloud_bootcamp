@@ -1,29 +1,33 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"time"
+	"gocloud/pkg/api"
+	"google.golang.org/grpc"
+	"log"
+	"net"
 )
 
 func main() {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	done := make(chan bool)
-	go func() {
-		time.Sleep(10 * time.Second)
-		done <- true
-	}()
-	for {
-		select {
-		case <-done:
-			fmt.Println("Done!")
-			return
-		case t := <-ticker.C:
-			fmt.Println("Current time: ", t)
-		}
+	obj := Obj{}
+	server := grpc.NewServer()
+	api.RegisterPlaylistServer(server, obj)
+	fmt.Println("starting server at :8081")
+
+	lis, err := net.Listen("tcp", "0.0.0.0:8081")
+	if err != nil {
+		log.Fatalln("cant listen port", err)
 	}
-	//t := true
-	//t := atomic.Bool{}
-	//t.Load()
-	//t.Swap(true)
+	go server.Serve(lis)
+	fmt.Scanln()
+}
+
+type Obj struct {
+	api.UnimplementedPlaylistServer
+}
+
+func (o Obj) Play(ctx context.Context, empt *api.Empty) (*api.PlayMessage, error) {
+	testo := api.PlayMessage{SongName: "diss"}
+	return &testo, nil
 }
