@@ -4,15 +4,28 @@ option go_package = "/pkg/api";
 
 package proto;
 
-
-message PlayMessage {
-  string SongName = 1;
-}
-
 message Empty{
 }
 
-service Playlist {
-  rpc Play (Empty) returns (PlayMessage){}
+message Song{
+  string Name =1;
+  uint64 Duration = 2;
 }
+
+message Response{
+  string Message = 1;
+  int32 StatusCode=2;
+}
+
+service Playlist {
+  rpc Play (Empty) returns (Response){}
+  rpc Pause (Empty) returns (Response){}
+  rpc Next (Empty) returns (Response){}
+  rpc Prev (Empty) returns (Response){}
+  rpc AddSong (Song) returns (Response){}
+  rpc GetCurrentSong (Empty) returns (Response){}
+  rpc DeleteSong (Song) returns (Response){}
+  rpc UpdateNextSong (Song) returns (Response){}
+}
+
 

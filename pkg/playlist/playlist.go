@@ -11,7 +11,7 @@ var Playlist Player
 type Player struct {
 	FirstTrack *list.List
 	NowPlaying *list.Element
-	mu         *sync.Mutex
+	Mu         *sync.Mutex
 	PlayChan   chan struct{}
 	PauseChan  chan struct{}
 	NextChan   chan struct{}
@@ -28,7 +28,7 @@ func init() {
 
 	Playlist = Player{FirstTrack: list.New(),
 		NowPlaying: nil,
-		mu:         &sync.Mutex{},
+		Mu:         &sync.Mutex{},
 		PlayChan:   make(chan struct{}),
 		PauseChan:  make(chan struct{}),
 		NextChan:   make(chan struct{}),

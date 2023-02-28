@@ -7,9 +7,9 @@ import (
 )
 
 func (p *Player) Play() error {
-	p.mu.Lock()
+	p.Mu.Lock()
 	if p.FirstTrack.Len() == 0 {
-		p.mu.Unlock()
+		p.Mu.Unlock()
 		return errors.New("playlist is empty")
 	}
 	if p.NowPlaying == nil {
@@ -17,41 +17,54 @@ func (p *Player) Play() error {
 		//go p.PlaySong()
 	}
 	p.PlayChan <- struct{}{}
-	p.mu.Unlock()
+	p.Mu.Unlock()
 
 	return nil
 }
 
 func (p *Player) PrevSong() error {
+	p.Mu.Lock()
 	if p.NowPlaying == nil {
+		p.Mu.Unlock()
 		return errors.New("playlist is empty")
 	}
 	if p.NowPlaying.Prev() == nil {
+		p.Mu.Unlock()
 		return errors.New("now playing is first song")
 	}
 	p.PrevChan <- struct{}{}
+	p.Mu.Unlock()
 	return nil
 }
 
 func (p *Player) PauseSong() error {
+	p.Mu.Lock()
 	if p.NowPlaying == nil {
+		p.Mu.Unlock()
 		return errors.New("playlist is empty")
 	}
 	if p.NowPlaying.Value.(Song).IsPlaying == false {
+		p.Mu.Unlock()
 		return errors.New("no song is playing now")
 	}
 	p.PauseChan <- struct{}{}
+	p.Mu.Unlock()
 	return nil
+	//смотри мьютексы и nowplaying на nil
 }
 func (p *Player) NextSong() error {
 
+	p.Mu.Lock()
 	if p.NowPlaying == nil {
+		p.Mu.Unlock()
 		return errors.New("playlist is empty")
 	}
 	if p.NowPlaying.Next() == nil {
+		p.Mu.Unlock()
 		return errors.New("now playing is last song")
 	}
 	p.NextChan <- struct{}{}
+	p.Mu.Unlock()
 	return nil
 	//протестировать конкурентность в горутинах и узнать нужен ли мьютекс
 	// в сабже написано что эта функция должна быть с учетом конкурентности, значит запись в канал
@@ -60,35 +73,35 @@ func (p *Player) NextSong() error {
 }
 
 func (p *Player) AddSong(song Song) {
-	p.mu.Lock()
+	p.Mu.Lock()
 	p.FirstTrack.PushBack(song)
-	p.mu.Unlock()
+	p.Mu.Unlock()
 }
 func (p *Player) DeleteSong(songTarget Song) error {
 	var res *list.Element
 
 	for e := p.FirstTrack.Front(); e != nil; e = e.Next() {
-		p.mu.Lock()
+		p.Mu.Lock()
 		song := e.Value.(Song)
-		p.mu.Unlock()
+		p.Mu.Unlock()
 		if song.Name == songTarget.Name {
 			res = e
 			break
 		}
 	}
-	p.mu.Lock()
+	p.Mu.Lock()
 	cast, ok := res.Value.(Song)
-	p.mu.Unlock()
+	p.Mu.Unlock()
 	if !ok || cast.Name != songTarget.Name {
 		return errors.New("no such song")
 	}
-	p.mu.Lock()
+	p.Mu.Lock()
 	if res.Value.(Song).IsPlaying {
-		p.mu.Unlock()
+		p.Mu.Unlock()
 		return errors.New("can't delete, the song is playing now")
 	}
 	p.FirstTrack.Remove(res)
-	p.mu.Unlock()
+	p.Mu.Unlock()
 
 	/// проверить мьютексы
 	return nil
@@ -127,25 +140,25 @@ func (p *Player) DeleteSong(songTarget Song) error {
 func (p *Player) PlaySong() {
 	//затестить мьютексы
 	for e := p.FirstTrack.Front(); e != nil; e = e.Next() {
-		p.mu.Lock()
+		p.Mu.Lock()
 		p.NowPlaying = e
 		song := p.NowPlaying.Value.(Song)
-		p.mu.Unlock()
+		p.Mu.Unlock()
 		timerDuration := timer.NewTimer(song.Duration)
 		for {
 			select {
 			case <-p.PlayChan:
 				timerDuration.Start()
 				song.IsPlaying = true
-				p.mu.Lock()
+				p.Mu.Lock()
 				p.NowPlaying.Value = song
-				p.mu.Unlock()
+				p.Mu.Unlock()
 			case <-p.PauseChan:
 				timerDuration.Pause()
 				song.IsPlaying = false
-				p.mu.Lock()
+				p.Mu.Lock()
 				p.NowPlaying.Value = song
-				p.mu.Unlock()
+				p.Mu.Unlock()
 			case <-timerDuration.C:
 				break
 			case <-p.NextChan:
@@ -176,22 +189,27 @@ func (p *Player) PlaySong() {
 //
 //}
 
-func (p *Player) CurrentSong() Song {
-	p.mu.Lock()
-	song := p.NowPlaying.Value.(Song)
-	p.mu.Unlock()
-	return song
+func (p *Player) CurrentSong() (Song, error) {
+	song := Song{}
+	p.Mu.Lock()
+	if p.NowPlaying == nil {
+		p.Mu.Unlock()
+		return song, errors.New("no song is playing now")
+	}
+	song = p.NowPlaying.Value.(Song)
+	p.Mu.Unlock()
+	return song, nil
 }
 
 func (p *Player) UpdateNextSong(song Song) {
-	p.mu.Lock()
+	p.Mu.Lock()
 	if p.NowPlaying == nil {
 		p.FirstTrack.PushBack(song)
-		p.mu.Unlock()
+		p.Mu.Unlock()
 		return
 	}
 	p.FirstTrack.InsertAfter(song, p.NowPlaying)
-	p.mu.Unlock()
+	p.Mu.Unlock()
 	//проверить на ошибки в случае если nowPlaying == nil
 	// можно это проверить на более верхнем уровне
 }
