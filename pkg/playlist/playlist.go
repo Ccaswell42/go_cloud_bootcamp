@@ -16,6 +16,7 @@ type Player struct {
 	PauseChan  chan struct{}
 	NextChan   chan struct{}
 	PrevChan   chan struct{}
+	FlagPrev   bool
 }
 
 type Song struct {
@@ -34,6 +35,5 @@ func init() {
 		NextChan:   make(chan struct{}),
 		PrevChan:   make(chan struct{}),
 	}
-	//go Playlist.Controller()
 
 }

@@ -3,7 +3,9 @@ package playlist
 import (
 	"container/list"
 	"errors"
+	"fmt"
 	"github.com/ivahaev/timer"
+	"log"
 )
 
 func (p *Player) Play() error {
@@ -14,11 +16,10 @@ func (p *Player) Play() error {
 	}
 	if p.NowPlaying == nil {
 		p.NowPlaying = p.FirstTrack.Front()
-		//go p.PlaySong()
+		go p.PlaySong()
 	}
-	p.PlayChan <- struct{}{}
 	p.Mu.Unlock()
-
+	p.PlayChan <- struct{}{}
 	return nil
 }
 
@@ -43,12 +44,17 @@ func (p *Player) PauseSong() error {
 		p.Mu.Unlock()
 		return errors.New("playlist is empty")
 	}
+	log.Println("PAUSECONGFUNC::::", p.NowPlaying.Value.(Song).IsPlaying)
 	if p.NowPlaying.Value.(Song).IsPlaying == false {
 		p.Mu.Unlock()
 		return errors.New("no song is playing now")
 	}
-	p.PauseChan <- struct{}{}
+	song := p.NowPlaying.Value.(Song)
+	song.IsPlaying = false
+	p.NowPlaying.Value = song
 	p.Mu.Unlock()
+	p.PauseChan <- struct{}{}
+
 	return nil
 	//смотри мьютексы и nowplaying на nil
 }
@@ -80,71 +86,51 @@ func (p *Player) AddSong(song Song) {
 func (p *Player) DeleteSong(songTarget Song) error {
 	var res *list.Element
 
+	p.Mu.Lock()
 	for e := p.FirstTrack.Front(); e != nil; e = e.Next() {
-		p.Mu.Lock()
 		song := e.Value.(Song)
-		p.Mu.Unlock()
 		if song.Name == songTarget.Name {
 			res = e
 			break
 		}
 	}
-	p.Mu.Lock()
-	cast, ok := res.Value.(Song)
-	p.Mu.Unlock()
-	if !ok || cast.Name != songTarget.Name {
+	if res == nil {
+		p.Mu.Unlock()
 		return errors.New("no such song")
 	}
-	p.Mu.Lock()
+	cast, ok := res.Value.(Song)
+	if !ok || cast.Name != songTarget.Name {
+		p.Mu.Unlock()
+		return errors.New("no such song")
+	}
 	if res.Value.(Song).IsPlaying {
 		p.Mu.Unlock()
 		return errors.New("can't delete, the song is playing now")
 	}
+	fmt.Println("DEELLLETEE:", res)
 	p.FirstTrack.Remove(res)
 	p.Mu.Unlock()
 
-	/// проверить мьютексы
+	/// проверить мьютексы!!!!!! тут с ними очень все плохо. и может вообще
+	/// выкинуть мьютексы и оставить их в хендлерах
 	return nil
 }
-
-//func (p *Player) PlaySong(chPlay, chPause, chNext, chPrev chan struct{}) {
-//	p.mu.Lock()
-//	song := p.NowPlaying.Value.(Song)
-//	p.mu.Unlock()
-//	timerDuration := timer.NewTimer(song.Duration)
-//	timerDuration.Start()
-//	for {
-//		select {
-//		case <-chPause:
-//			timerDuration.Pause()
-//			song.IsPlaying = false
-//			p.mu.Lock()
-//			p.NowPlaying.Value = song
-//			p.mu.Unlock()
-//		case <-chPlay:
-//			timerDuration.Start()
-//			song.IsPlaying = true
-//			p.mu.Lock()
-//			p.NowPlaying.Value = song
-//			p.mu.Unlock()
-//		case <-timerDuration.C:
-//			return
-//		case <-chNext:
-//			return
-//		case <-chPrev:
-//			return
-//		}
-//	}
-//}
 
 func (p *Player) PlaySong() {
 	//затестить мьютексы
 	for e := p.FirstTrack.Front(); e != nil; e = e.Next() {
+		fmt.Println("new iteration")
 		p.Mu.Lock()
+		if p.FlagPrev {
+			p.FlagPrev = false
+			e = e.Prev().Prev()
+		}
 		p.NowPlaying = e
 		song := p.NowPlaying.Value.(Song)
 		p.Mu.Unlock()
 		timerDuration := timer.NewTimer(song.Duration)
+		timerDuration.Start()
+	LOOP:
 		for {
 			select {
 			case <-p.PlayChan:
@@ -155,39 +141,30 @@ func (p *Player) PlaySong() {
 				p.Mu.Unlock()
 			case <-p.PauseChan:
 				timerDuration.Pause()
+				fmt.Println("playyer", p.NowPlaying.Value)
 				song.IsPlaying = false
 				p.Mu.Lock()
 				p.NowPlaying.Value = song
+				fmt.Println("playyer2222222222", p.NowPlaying.Value)
 				p.Mu.Unlock()
 			case <-timerDuration.C:
-				break
+				fmt.Println("дошли до конца таймера")
+				break LOOP
 			case <-p.NextChan:
-				break
+				break LOOP
 			case <-p.PrevChan:
-				e = e.Prev().Prev()
-				break
+				p.Mu.Lock()
+				p.FlagPrev = true
+				p.Mu.Unlock()
+				break LOOP
 			}
-
+			fmt.Println("вышли из селекта, сейчас в бесконечности")
 		}
+		fmt.Println("вышли из бесконечности, сейчас в основном цикле")
 	}
+	fmt.Println("выходим из горутины почему-то")
+	p.NowPlaying = nil
 }
-
-//func (p *Player) Controller() {
-//
-//	chPlay := make(chan struct{})
-//	chPause := make(chan struct{})
-//	chNext := make(chan struct{})
-//	chPrev := make(chan struct{})
-//	for {
-//		select {
-//		case <-p.PlayChan:
-//			go p.PlaySong(chPlay, chPause, chNext, chPrev)
-//			chPlay <- struct{}{}
-//		}
-//
-//	}
-//
-//}
 
 func (p *Player) CurrentSong() (Song, error) {
 	song := Song{}

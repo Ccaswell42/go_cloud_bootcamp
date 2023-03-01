@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"database/sql"
 	"errors"
+	_ "github.com/lib/pq"
 	"gocloud/config"
 	"gocloud/pkg/playlist"
 	"log"
@@ -70,7 +71,7 @@ func (r *Repository) DeleteSong(song playlist.Song) error {
 
 func (r *Repository) Set(song playlist.Song) error {
 	durationNum := int(song.Duration.Seconds())
-	_, err := r.Db.Exec("insert into playlist values (default, $1, $2, false)",
+	_, err := r.Db.Exec("insert into playlist values (default, $1, $2)",
 		song.Name, durationNum)
 	if err != nil {
 		log.Println("insert error: ", err)
