@@ -6,7 +6,6 @@ import (
 	"errors"
 	_ "github.com/lib/pq"
 	"gocloud/config"
-	"gocloud/pkg/playlist"
 	"log"
 	"strconv"
 	"time"
@@ -14,6 +13,11 @@ import (
 
 type Repository struct {
 	Db *sql.DB
+}
+
+type Song struct {
+	Name     string
+	Duration time.Duration
 }
 
 func ConnectToDb(conf *config.Config) (*Repository, error) {
@@ -43,7 +47,7 @@ func (r *Repository) GetAll() (*list.List, error) {
 
 	songList := list.New()
 	for rows.Next() {
-		song := playlist.Song{}
+		song := Song{}
 		var durationNum int
 		err = rows.Scan(&song.Name, &durationNum)
 		str := strconv.Itoa(durationNum) + "s"
@@ -59,7 +63,7 @@ func (r *Repository) GetAll() (*list.List, error) {
 	return songList, err
 }
 
-func (r *Repository) DeleteSong(song playlist.Song) error {
+func (r *Repository) DeleteSong(song Song) error {
 
 	_, err := r.Db.Exec("DELETE from playlist where name = $1", song.Name)
 	if err != nil {
@@ -69,7 +73,7 @@ func (r *Repository) DeleteSong(song playlist.Song) error {
 	return nil
 }
 
-func (r *Repository) Set(song playlist.Song) error {
+func (r *Repository) Set(song Song) error {
 	durationNum := int(song.Duration.Seconds())
 	_, err := r.Db.Exec("insert into playlist values (default, $1, $2)",
 		song.Name, durationNum)

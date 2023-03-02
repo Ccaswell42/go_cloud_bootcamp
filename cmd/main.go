@@ -3,11 +3,20 @@ package main
 import (
 	"fmt"
 	"gocloud/config"
+	"gocloud/pkg/api"
+	"gocloud/pkg/handlers"
 	"gocloud/pkg/playlist"
 	"gocloud/pkg/storage"
+	"google.golang.org/grpc"
 	"log"
-	"time"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
+
+const host = "0.0.0.0"
 
 func main() {
 	conf, err := config.GetConfig()
@@ -19,93 +28,31 @@ func main() {
 		log.Fatal("connect", err)
 	}
 
-	//song1 := playlist.Song{Name: "basta", Duration: 14 * time.Second, IsPlaying: false}
-	//song2 := playlist.Song{Name: "atl", Duration: 12 * time.Second, IsPlaying: false}
-	//song3 := playlist.Song{Name: "srcip", Duration: 17 * time.Second, IsPlaying: false}
-	//
-	//repo.Set(song3)
-	//repo.Set(song2)
-	//repo.Set(song1)
-
-	list, err := repo.GetAll()
+	controller, err := playlist.New(repo)
 	if err != nil {
 		log.Println(err)
 	}
-
-	controller := playlist.Playlist
-	controller.FirstTrack = list
-	for e := controller.FirstTrack.Front(); e != nil; e = e.Next() {
-		fmt.Println(e.Value)
-	}
-
-	err = controller.Play()
+	srvPlaylist := handlers.ServerPlaylist{Controller: controller}
+	lis, err := net.Listen("tcp", host+conf.Port)
 	if err != nil {
-		log.Println("play", err)
+		log.Fatalln("cant listen port", err)
 	}
-	fmt.Println("---------------------")
+	server := grpc.NewServer()
+	api.RegisterPlaylistServer(server, srvPlaylist)
 
 	go func() {
-		for {
-			song, err := controller.CurrentSong()
-			if err != nil {
-				log.Println(err)
-			}
-			fmt.Println(song)
-			time.Sleep(1 * time.Second)
+		fmt.Println("starting server at ", conf.Port)
+		err := server.Serve(lis)
+		if err != http.ErrServerClosed {
+			log.Fatal(err)
 		}
-
+		fmt.Println("server completed successfully")
 	}()
-	//time.Sleep(2 * time.Second)
-	go func() {
-		err := controller.PauseSong()
-		if err != nil {
-			log.Println("pause err", err)
-		}
-		//err = controller.Play()
-		//if err != nil {
-		//	log.Println("pause err", err)
-		//}
-		//time.Sleep(100 * time.Millisecond)
-		err = controller.PauseSong()
-		if err != nil {
-			log.Println("pause err", err)
-		}
-
-	}()
-	//go func() {
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//	controller.NextSong()
-	//	time.Sleep(2 * time.Second)
-	//
-	//}()
-
-	//go func() {
-	//	song1 := playlist.Song{Name: "makSim", Duration: 11 * time.Second, IsPlaying: false}
-	//	song2 := playlist.Song{Name: "ranetki", Duration: 11 * time.Second, IsPlaying: false}
-	//	controller.AddSong(song2)
-	//	time.Sleep(2 * time.Second)
-	//	controller.AddSong(song1)
-	//
-	//}()
-
-	time.Sleep(18 * time.Second)
-
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+	server.GracefulStop()
+	log.Println("Shutdown completed successfully")
 }
 
 //obj := Obj{}

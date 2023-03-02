@@ -2,21 +2,22 @@ package playlist
 
 import (
 	"container/list"
+	"fmt"
+	"gocloud/pkg/storage"
 	"sync"
 	"time"
 )
 
-var Playlist Player
-
 type Player struct {
-	FirstTrack *list.List
-	NowPlaying *list.Element
-	Mu         *sync.Mutex
-	PlayChan   chan struct{}
-	PauseChan  chan struct{}
-	NextChan   chan struct{}
-	PrevChan   chan struct{}
-	FlagPrev   bool
+	songList   *list.List
+	nowPlaying *list.Element
+	mutex      *sync.Mutex
+	playChan   chan struct{}
+	pauseChan  chan struct{}
+	nextChan   chan struct{}
+	prevChan   chan struct{}
+	flagPrev   bool
+	repo       *storage.Repository
 }
 
 type Song struct {
@@ -25,15 +26,28 @@ type Song struct {
 	IsPlaying bool
 }
 
-func init() {
-
-	Playlist = Player{FirstTrack: list.New(),
-		NowPlaying: nil,
-		Mu:         &sync.Mutex{},
-		PlayChan:   make(chan struct{}),
-		PauseChan:  make(chan struct{}),
-		NextChan:   make(chan struct{}),
-		PrevChan:   make(chan struct{}),
+func New(repo *storage.Repository) (*Player, error) {
+	Playlist := Player{
+		nowPlaying: nil,
+		mutex:      &sync.Mutex{},
+		playChan:   make(chan struct{}),
+		pauseChan:  make(chan struct{}),
+		nextChan:   make(chan struct{}),
+		prevChan:   make(chan struct{}),
+		repo:       repo,
+	}
+	songList, err := Playlist.repo.GetAll()
+	if err != nil {
+		Playlist.songList = list.New()
+		return &Playlist, err
+	}
+	for e := songList.Front(); e != nil; e = e.Next() {
+		fmt.Println("vygruzka", e.Value)
+		songDB := e.Value.(storage.Song)
+		song := Song{Name: songDB.Name, Duration: songDB.Duration, IsPlaying: false}
+		e.Value = song
 	}
 
+	Playlist.songList = songList
+	return &Playlist, nil
 }
