@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"gocloud/config"
 	"gocloud/pkg/api"
@@ -158,7 +159,7 @@ func ParseSong(sc *bufio.Scanner) (*api.Song, error) {
 	durTime, err := time.ParseDuration(duration)
 	if err != nil || durTime < 0 {
 		fmt.Println("CLI: failed to read duration")
-		return nil, err
+		return nil, errors.New("failed read duration")
 	}
 	return &api.Song{Name: name, Duration: uint64(durTime.Seconds())}, nil
 }
