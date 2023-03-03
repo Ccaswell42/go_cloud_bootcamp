@@ -61,5 +61,24 @@
 8) "update" - сначала необходимо будет ввести название песни, затем продолжительность, затем будет вызван метод UpdateNextSong()
 9) "exit" - завершит работу клиентского приложения
 
-
-
+### Примеры запросов и ответов (скриншоты из терминала):
+#### Запуск клиента:
+![start](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/start.png)
+#### Play:
+![play](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/play.png)
+![play_err](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/play_err.png)
+#### Pause:
+![pause](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/pause.png)
+#### Add:
+![add](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/add.png)
+#### Next:
+![Next](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/next.png)
+![next_err](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/next_err.png)
+#### Prev:
+![Prev](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/prev_err.png)
+#### Get:
+![Get](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/get.png)
+![Get_no](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/get_no.png)
+#### Delete:
+![Delete](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/delete.png)
+![Delete_err](https://github.com/Ccaswell42/screenshots/blob/main/screens_gocloudcamp/delete_err.png)
