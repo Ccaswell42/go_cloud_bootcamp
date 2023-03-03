@@ -117,8 +117,6 @@ func ReadlLine(c api.PlaylistClient) {
 			break
 		}
 		switch scanner.Text() {
-		case "exit":
-			break
 		case "play":
 			Play(c)
 		case "pause":
@@ -130,17 +128,17 @@ func ReadlLine(c api.PlaylistClient) {
 		case "get":
 			GetCurrentSong(c)
 		case "add":
-			song, err := ParseSong()
+			song, err := ParseSong(scanner)
 			if err == nil {
 				AddSong(c, song)
 			}
 		case "delete":
-			song, err := ParseSong()
+			song, err := ParseSong(scanner)
 			if err == nil {
 				DeleteSong(c, song)
 			}
 		case "update":
-			song, err := ParseSong()
+			song, err := ParseSong(scanner)
 			if err == nil {
 				UpdateSong(c, song)
 			}
@@ -149,27 +147,18 @@ func ReadlLine(c api.PlaylistClient) {
 	}
 }
 
-func ParseSong() (*api.Song, error) {
+func ParseSong(sc *bufio.Scanner) (*api.Song, error) {
 	fmt.Println("enter song name")
 	var name, duration string
-	_, err := fmt.Scan(&name)
-	if err != nil {
-
-		fmt.Println("CLI: read song name problem")
-		return nil, err
-	}
+	sc.Scan()
+	name = sc.Text()
 	fmt.Println("enter song duration in format:", "1h10m10s")
-	_, err = fmt.Scan(&duration)
-	if err != nil {
-		fmt.Println("CLI: read song duration problem")
-		return nil, err
-	}
+	sc.Scan()
+	duration = sc.Text()
 	durTime, err := time.ParseDuration(duration)
-	log.Println(durTime)
 	if err != nil || durTime < 0 {
 		fmt.Println("CLI: failed to read duration")
 		return nil, err
 	}
-	log.Println(api.Song{Name: name, Duration: uint64(durTime.Seconds())})
 	return &api.Song{Name: name, Duration: uint64(durTime.Seconds())}, nil
 }
