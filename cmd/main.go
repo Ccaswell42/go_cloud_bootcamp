@@ -16,16 +16,19 @@ import (
 	"syscall"
 )
 
-const host = "0.0.0.0"
+const (
+	host    = "0.0.0.0:"
+	network = "tcp"
+)
 
 func main() {
 	conf, err := config.GetConfig()
 	if err != nil {
-		log.Fatal("config", err)
+		log.Fatal("config:", err)
 	}
 	repo, err := storage.ConnectToDb(conf)
 	if err != nil {
-		log.Fatal("connect", err)
+		log.Fatal("connect to DB:", err)
 	}
 
 	controller, err := playlist.New(repo)
@@ -33,9 +36,9 @@ func main() {
 		log.Println(err)
 	}
 	srvPlaylist := handlers.ServerPlaylist{Controller: controller}
-	lis, err := net.Listen("tcp", host+conf.Port)
+	lis, err := net.Listen(network, host+conf.Port)
 	if err != nil {
-		log.Fatalln("cant listen port", err)
+		log.Fatal("can't listen port:", err)
 	}
 	server := grpc.NewServer()
 	api.RegisterPlaylistServer(server, srvPlaylist)
@@ -54,15 +57,3 @@ func main() {
 	server.GracefulStop()
 	log.Println("Shutdown completed successfully")
 }
-
-//obj := Obj{}
-//server := grpc.NewServer()
-//api.RegisterPlaylistServer(server, obj)
-//fmt.Println("starting server at :8081")
-//
-//lis, err := net.Listen("tcp", "0.0.0.0:8081")
-//if err != nil {
-//	log.Fatalln("cant listen port", err)
-//}
-//go server.Serve(lis)
-//fmt.Scanln()

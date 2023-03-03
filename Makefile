@@ -1,17 +1,17 @@
 PROTO = api/proto/service.proto
 
 
-all:
-	go run cmd/main.go
+build:
+	docker-compose build
+
+up:
+	docker-compose up
 
 genpb:
 	protoc --go_out=. --go_opt=paths=import  --go-grpc_out=. --go-grpc_opt=paths=import $(PROTO)
 
-client:
+cli:
 	go run client/main.go
 
-doc:  compose
-	docker-compose up
-
-compose:
-	docker-compose build
+all:
+	go run cmd/main.go

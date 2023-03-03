@@ -14,7 +14,6 @@ message Song{
 
 message Response{
   string Message = 1;
-  int32 StatusCode=2;
 }
 
 service Playlist {

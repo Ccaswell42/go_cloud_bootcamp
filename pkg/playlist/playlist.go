@@ -2,7 +2,6 @@ package playlist
 
 import (
 	"container/list"
-	"fmt"
 	"gocloud/pkg/storage"
 	"sync"
 	"time"
@@ -42,7 +41,6 @@ func New(repo *storage.Repository) (*Player, error) {
 		return &Playlist, err
 	}
 	for e := songList.Front(); e != nil; e = e.Next() {
-		fmt.Println("vygruzka", e.Value)
 		songDB := e.Value.(storage.Song)
 		song := Song{Name: songDB.Name, Duration: songDB.Duration, IsPlaying: false}
 		e.Value = song

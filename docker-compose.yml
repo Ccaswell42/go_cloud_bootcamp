@@ -3,8 +3,10 @@ services:
   gocloud:
     build:
       context: .
+    env_file:
+      - ".env"
     ports:
-      - "8088:8088"
+      - ${PORT}:${PORT}
     depends_on:
       - db
   db:
@@ -15,4 +17,4 @@ services:
     volumes:
       - ./schema:/docker-entrypoint-initdb.d
     ports:
-      - "5436:5432"
+      - ${DB_PORT}:5432
